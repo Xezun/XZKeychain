@@ -328,7 +328,7 @@
 - (void)setValue:(id)value forAttribute:(XZKeychainAttribute)attribute {
     if (![[self valueForAttribute:attribute] isEqual:value]) {
         NSString *key = [[self class] _XZKeychain_keyObjectForAtrribute:attribute];
-        [[self _XZKeychain_attributesLazyLoad] setObject:value forKeyedSubscript:key];
+        [self _XZKeychain_attributesLazyLoad][key] = value;
     }
 }
 
@@ -338,7 +338,7 @@
 
 - (id)valueForAttribute:(XZKeychainAttribute)attribute {
     NSString *key = [[self class] _XZKeychain_keyObjectForAtrribute:attribute];
-    return [_attributes objectForKey:key];
+    return _attributes[key];
 }
 
 - (id)objectForAttribute:(XZKeychainAttribute)attribute {
