@@ -483,7 +483,6 @@
         } else {
             // 保存属性
             NSMutableDictionary *attributes = [NSMutableDictionary dictionaryWithDictionary:(__bridge NSDictionary * _Nonnull)(resultDictRef)];
-            [self _XZKeychain_setAttributes:attributes];
             
             // 查询密码：密码并不是随属性一起返回的，需要重新在钥匙串中查询。
             NSMutableDictionary *passwordQuery = [NSMutableDictionary dictionaryWithDictionary:attributes];
@@ -499,6 +498,7 @@
                 NSData *passwordData = (__bridge NSData *)(passwordDataRef);
                 // 将密码保存
                 [attributes setObject:passwordData forKey:kXZGenericPasswordKeychainPasswordKey];
+                [self _XZKeychain_setAttributes:attributes];
             } else {
                 NSAssert(NO, @"出现严重错误，在钥匙串中没有找到密码。\n");
             }
