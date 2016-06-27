@@ -1,6 +1,6 @@
 # XZKeychain
 提供了一个非常方便的方法访问“钥匙串”，示例代码：
-`objective-c
+```objective-c
     NSString *identifer = @"anIdentifier";
     XZKeychain *keychain = [[XZKeychain alloc] initWithIdentifier:identifer];
     NSLog(@"account: %@", keychain.account);
@@ -19,4 +19,4 @@
     } else {
         NSLog(@"删除失败：%@", error.localizedDescription);
     }
-`objective-c
+```
