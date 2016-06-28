@@ -27,6 +27,19 @@
 
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
+    
+    XZKeychainManager *manager = [[XZKeychainManager alloc] init];
+    //[manager addQueryObject:self.identifierLabel.text forAttribute:(XZKeychainAttributeGeneric)];
+    NSError *error = nil;
+    NSArray *array = [manager search:&error];
+    if (error == nil) {
+        for (XZKeychain *keychain in array) {
+            NSLog(@"%@", [keychain valueForAttribute:(XZKeychainAttributeCreationDate)]);
+        }
+    } else {
+        NSLog(@"%@", error.localizedDescription);
+    }
+    
 }
 
 - (void)didReceiveMemoryWarning {

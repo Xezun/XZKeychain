@@ -204,5 +204,20 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 
 @end
 
+/**
+ *  管理 XZKeychain。 提供一系列的搜索方法。
+ */
+@interface XZKeychainManager : NSObject
+
++ (NSArray<XZKeychain *> * _Nullable)allKeychains:(NSError * _Nullable * _Nullable)error;
+
+- (void)addQueryObject:(nullable id)anObject forAttribute:(XZKeychainAttribute)attribute;
+
+
+- (NSArray<XZKeychain *> * _Nullable)search:(NSError * _Nullable * _Nullable)error;
+- (NSArray<XZKeychain *> * _Nullable)searchWithKeychainType:(XZKeychainType)keychainType error:(NSError *_Nullable *_Nullable)error;
+
+@end
+
 
 

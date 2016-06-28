@@ -62,6 +62,9 @@
         case XZKeychainTypeInternetPassword:
             return (NSString *)kSecClassInternetPassword;
             break;
+        case XZKeychainTypeCertificate:
+            return (NSString *)kSecClassCertificate;
+            break;
         case XZKeychainTypeKey:
             return (NSString *)kSecClassKey;
             break;
@@ -75,7 +78,7 @@
     }
 }
 
-+ (id)_XZKeychain_keyObjectForAtrribute:(XZKeychainAttribute)attribute {
++ (id)_XZKeychain_keyObjectForAttribute:(XZKeychainAttribute)attribute {
     switch (attribute) {
         case XZKeychainAttributeAccessible:
             return (id)kSecAttrAccessible;
@@ -328,7 +331,7 @@
 
 - (void)setValue:(id)value forAttribute:(XZKeychainAttribute)attribute {
     if (![[self valueForAttribute:attribute] isEqual:value]) {
-        NSString *key = [[self class] _XZKeychain_keyObjectForAtrribute:attribute];
+        NSString *key = [[self class] _XZKeychain_keyObjectForAttribute:attribute];
         [self _XZKeychain_attributesLazyLoad][key] = value;
     }
 }
@@ -338,7 +341,7 @@
 }
 
 - (id)valueForAttribute:(XZKeychainAttribute)attribute {
-    NSString *key = [[self class] _XZKeychain_keyObjectForAtrribute:attribute];
+    NSString *key = [[self class] _XZKeychain_keyObjectForAttribute:attribute];
     return _attributes[key];
 }
 
@@ -362,7 +365,7 @@
         // 复制要更新的值
         NSMutableDictionary *newAttributes = [NSMutableDictionary dictionaryWithDictionary:_attributes];
 #if TARGET_IPHONE_SIMULATOR
-        NSString *groupKey = [[self class] _XZKeychain_keyObjectForAtrribute:(XZKeychainAttributeAccessGroup)];
+        NSString *groupKey = [[self class] _XZKeychain_keyObjectForAttribute:(XZKeychainAttributeAccessGroup)];
         [newAttributes removeObjectForKey:groupKey];
 #endif
         
@@ -453,7 +456,7 @@
 #endif
         
         // identifier
-        NSString *identifierKey = [XZKeychain _XZKeychain_keyObjectForAtrribute:(XZKeychainAttributeGeneric)];
+        NSString *identifierKey = [XZKeychain _XZKeychain_keyObjectForAttribute:(XZKeychainAttributeGeneric)];
         [keychainQuery setObject:identifier forKeyedSubscript:identifierKey];
         
         // 设置只返回第一个匹配的结果
@@ -542,7 +545,90 @@
 @end
 
 
+@interface XZKeychainManager () {
+    NSMutableDictionary *_XZKeychainManagerQuery;
+}
 
+@end
+
+@implementation XZKeychainManager
+
++ (NSArray<XZKeychain *> *)allKeychains:(NSError *__autoreleasing  _Nullable *)error {
+    return [[[self alloc] init] search:error];
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _XZKeychainManagerQuery = [[NSMutableDictionary alloc] init];
+    }
+    return self;
+}
+
+- (void)addQueryObject:(id)anObject forAttribute:(XZKeychainAttribute)attribute {
+    NSString *key = [XZKeychain _XZKeychain_keyObjectForAttribute:attribute];
+    [_XZKeychainManagerQuery setObject:anObject forKey:key];
+}
+
+- (NSArray<XZKeychain *> *)search:(NSError *__autoreleasing  _Nullable *)error {
+    return [self searchWithKeychainType:(XZKeychainTypeNotAType) error:error];
+}
+
+- (NSArray<XZKeychain *> *)searchWithKeychainType:(XZKeychainType)keychainType error:(NSError *__autoreleasing  _Nullable * _Nullable)error {
+    NSMutableArray<XZKeychain *> *keychains = nil;
+    NSMutableDictionary *keychainQuery = [NSMutableDictionary dictionaryWithDictionary:_XZKeychainManagerQuery];
+    // 设置检索条件
+    if (keychainType < XZKeychainTypeNotAType) {
+        // 钥匙串分类
+        NSString *typeObject = [XZKeychain _XZKeychain_objectForType:keychainType];
+        [keychainQuery setObject:typeObject forKeyedSubscript:kXZKeychainTypeKey];
+    } else {
+        for (XZKeychainType type = 0; type < XZKeychainTypeNotAType; type++) {
+            NSMutableArray *tmp = (NSMutableArray *)[self searchWithKeychainType:type error:error];
+            if (error != NULL && *error != nil) {
+                keychains = nil;
+                break;
+            } else {
+                if (keychains == nil) {
+                    keychains = tmp;
+                } else {
+                    [keychains addObjectsFromArray:tmp];
+                }
+            }
+        }
+        return keychains;
+    }
+    
+    // 设置只返回所有匹配的结果
+    [keychainQuery setObject:(id)kSecMatchLimitAll forKeyedSubscript:(id)kSecMatchLimit]; // 只返回一个
+    [keychainQuery setObject:(id)kCFBooleanTrue forKeyedSubscript:(id)kSecReturnAttributes];  // 返回“非加密属性”字典
+    
+    // 执行搜索
+    
+    CFArrayRef resultArrayRef = NULL;
+    OSStatus statusCode = SecItemCopyMatching((__bridge CFDictionaryRef)keychainQuery, (CFTypeRef *)&resultArrayRef);
+    if (statusCode == noErr) {
+        if (resultArrayRef != NULL) {
+            NSInteger count = CFArrayGetCount(resultArrayRef);
+            if (count > 0) {
+                keychains = [[NSMutableArray alloc] initWithCapacity:count];
+                NSArray<NSDictionary *> *attributesArray = (__bridge NSArray * _Nonnull)(resultArrayRef);
+                for (NSDictionary *attributesDict in attributesArray) {
+                    NSMutableDictionary *attributes = [[NSMutableDictionary alloc] initWithDictionary:attributesDict];
+                    XZKeychain *keychain = [[XZKeychain alloc] initWithType:keychainType];
+                    [keychain _XZKeychain_setAttributes:attributes];  // 这里调用内部接口，直接复制
+                    [keychains addObject:keychain];
+                }
+            }
+            CFRelease(resultArrayRef);
+        }
+    } else if (statusCode != errSecItemNotFound && error != NULL) {
+        *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:statusCode userInfo:@{NSLocalizedDescriptionKey:[XZKeychain _XZKeyChain_descriptionForErrorStatus:statusCode]}];
+    }
+    return keychains;
+}
+
+@end
 
 
 
