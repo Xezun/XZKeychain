@@ -137,7 +137,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 /**
  *  存放钥匙串属性的字典。
  */
-@property (nonatomic, strong, readonly) NSDictionary<NSString *, id> * _Nullable attributes;
+//@property (nonatomic, strong, readonly) NSDictionary * _Nullable attributes;
 
 /**
  *  便利构造器与指定的初始化方法。
@@ -204,18 +204,21 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 
 @end
 
+FOUNDATION_EXTERN NSInteger const kXZKeychainStatusNoError;
+
 /**
  *  管理 XZKeychain。 提供一系列的搜索方法。
  */
 @interface XZKeychainManager : NSObject
 
-+ (NSArray<XZKeychain *> * _Nullable)allKeychains:(NSError * _Nullable * _Nullable)error;
++ (NSArray<XZKeychain *> * _Nullable)allKeychains:(NSError * _Nonnull * _Nullable)error;
 
 - (void)addQueryObject:(nullable id)anObject forAttribute:(XZKeychainAttribute)attribute;
 
+- (NSArray<XZKeychain *> * _Nullable)matchingKeychains;
 
-- (NSArray<XZKeychain *> * _Nullable)search:(NSError * _Nullable * _Nullable)error;
-- (NSArray<XZKeychain *> * _Nullable)searchWithKeychainType:(XZKeychainType)keychainType error:(NSError *_Nullable *_Nullable)error;
+- (NSArray<XZKeychain *> * _Nullable)search:(NSError * _Nonnull * _Nullable)error;
+- (NSArray<XZKeychain *> * _Nullable)searchWithKeychainType:(XZKeychainType)keychainType error:(NSError * _Nonnull *_Nullable)error;
 
 @end
 
