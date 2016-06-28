@@ -11,11 +11,10 @@
 #import "XZKeychain.h"
 
 @interface ViewController ()
+
 @property (weak, nonatomic) IBOutlet UITextField *accountTextField;
 @property (weak, nonatomic) IBOutlet UITextField *passwordTextField;
-
 @property (weak, nonatomic) IBOutlet UILabel *identifierLabel;
-
 @property (weak, nonatomic) IBOutlet UILabel *messageLabel;
 
 @end

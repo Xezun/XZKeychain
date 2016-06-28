@@ -9,6 +9,7 @@
 #import "XZKeychain.h"
 #import <objc/runtime.h>
 
+// 设置钥匙串类型的键名
 #define kXZKeychainTypeKey  (NSString *)kSecClass
 
 @interface XZKeychain () {

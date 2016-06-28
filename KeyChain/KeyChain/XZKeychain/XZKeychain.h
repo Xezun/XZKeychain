@@ -168,18 +168,25 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 
 /**
  *  通用密码钥匙串：XZKeychain.type = XZKeychainTypeGenericPassword。
- *  AccessGroup 需要在项目中创建一个如下结构的 plist 文件，将文件名作为参数传入。
- *  在 Target -> Build settings -> Code Sign Entitlements 设置签名授权为该 plist 文件。
- *  <dict>
- *      <key>keychain-access-groups</key>
- *      <array>
- *          <string>YOUR_APP_ID_HERE.com.yourcompany.keychain</string>
- *          <string>YOUR_APP_ID_HERE.com.yourcompany.keychainSuite</string>
- *      </array>
- *  </dict>
+ *  关于 AccessGroup 钥匙串共享的两种设置方法：
+ *  1, 首先，需要在项目中创建一个如下结构的 plist 文件，将文件名作为 group 参数传入；
+ *     然后，在 Target -> Build settings -> Code Sign Entitlements 设置签名授权为该 plist 文件。
+ *     ┌────────────────────────────────────────────────────────────────────────────────────┐
+ *     │<dict>                                                                              │
+ *     │    <key>keychain-access-groups</key>                                               │
+ *     │    <array>                                                                         │
+ *     │        <string>YOUR_APP_ID_HERE.com.yourcompany.keychain</string>                  │
+ *     │        <string>YOUR_APP_ID_HERE.com.yourcompany.keychainSuite</string>             │
+ *     │    </array>                                                                        │
+ *     │</dict>                                                                             │
+ *     └────────────────────────────────────────────────────────────────────────────────────┘
+ *  2, 在 Target -> Capabilities -> Keychain Sharing 中设置。
  */
 @interface XZKeychain (XZGenericPasswordKeychain)
 
+/**
+ *  以下两个属性，不支持 KVC 。
+ */
 @property (nonatomic, strong) NSString * _Nullable account;
 @property (nonatomic, strong) NSString * _Nullable password;
 
@@ -189,6 +196,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (NSString * _Nullable)password;
 - (void)setPassword:(NSString * _Nullable)password;
 
+// 以下方法创建的对象 .type = XZKeychainTypeGenericPassword
 + (nullable instancetype)keychainWithIdentifier:(NSString * _Nonnull)identifier;
 + (nullable instancetype)keychainWithAccessGroup:(NSString * _Nullable)group identifier:(NSString * _Nonnull)identifier;
 - (nullable instancetype)initWithIdentifier:(NSString * _Nonnull)identifier;
