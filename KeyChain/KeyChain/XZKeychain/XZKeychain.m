@@ -14,7 +14,7 @@
 
 NSString *const kXZKeychainErrorDomain = @"com.mlibai.keychain";
 
-static NSString *NSStringFromKeychainItemType(XZKeychainType type) {
+static NSString *NSStringFromKeychainType(XZKeychainType type) {
     switch (type) {
         case XZKeychainTypeGenericPassword:
             return (NSString *)kSecClassGenericPassword;
@@ -32,7 +32,7 @@ static NSString *NSStringFromKeychainItemType(XZKeychainType type) {
             return (NSString *)kSecClassIdentity;
             break;
         case XZKeychainTypeNotSupported:
-            return nil;
+            return @"NotSupportedKeychain";
         default:
             break;
     }
@@ -200,7 +200,7 @@ static NSString *NSStringFromKeychainAttribute(XZKeychainAttribute attribute) {
             return (id)kSecAttrCanUnwrap;
             break;
         default:
-            return nil;
+            return @"NotSupportedAttribute";
             break;
     }
 }
@@ -259,14 +259,14 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
 
 #pragma mark - _XZKeychainValue
 
-@interface _XZKeychainItemAttributeValue : NSObject
+@interface _XZKeychainAttributeValue : NSObject
 
 @property (nonatomic, strong) id originalValue;
 @property (nonatomic, strong) id updatingValue;
 
 @end
 
-@implementation _XZKeychainItemAttributeValue
+@implementation _XZKeychainAttributeValue
 
 - (NSString *)description {
     return [NSString stringWithFormat:@"{originalValue: %@, updatingValue: %@}", self.originalValue, self.updatingValue];
@@ -277,11 +277,11 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
 #pragma mark - XZKeychainItem
 
 @interface XZKeychain () {
-    NSMutableDictionary<NSString *, _XZKeychainItemAttributeValue *> *_attributes;
+    NSMutableDictionary<NSString *, _XZKeychainAttributeValue *> *_attributes;
 }
 
-- (NSMutableDictionary<NSString *, _XZKeychainItemAttributeValue *> *)_XZKeychain_attributesIfLoaded;
-- (NSMutableDictionary<NSString *, _XZKeychainItemAttributeValue *> *)_XZKeychain_attributesLazyLoad;
+- (NSMutableDictionary<NSString *, _XZKeychainAttributeValue *> *)_XZKeychain_attributesIfLoaded;
+- (NSMutableDictionary<NSString *, _XZKeychainAttributeValue *> *)_XZKeychain_attributesLazyLoad;
 
 @end
 
@@ -292,7 +292,7 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     NSMutableDictionary *tmp = nil;
     if ([self _XZKeychain_attributesIfLoaded].count > 0) {
         tmp = [[NSMutableDictionary alloc] init];
-        [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+        [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
             tmp[key] = obj.updatingValue;
         }];
     }
@@ -318,15 +318,15 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
 #pragma mark - 私有方法
 
 - (NSString *)_XZKeychain_typeString {
-    NSString *typeString = NSStringFromKeychainItemType(self.type);
+    NSString *typeString = NSStringFromKeychainType(self.type);
     return typeString;
 }
 
-- (NSMutableDictionary<NSString *,_XZKeychainItemAttributeValue *> *)_XZKeychain_attributesIfLoaded {
+- (NSMutableDictionary<NSString *,_XZKeychainAttributeValue *> *)_XZKeychain_attributesIfLoaded {
     return _attributes;
 }
 
-- (NSMutableDictionary<NSString *, _XZKeychainItemAttributeValue *> *)_XZKeychain_attributesLazyLoad {
+- (NSMutableDictionary<NSString *, _XZKeychainAttributeValue *> *)_XZKeychain_attributesLazyLoad {
     if (_attributes != nil) {
         return _attributes;
     }
@@ -338,7 +338,7 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
 
 - (BOOL)isModified {
     BOOL isModified = NO;
-    for (_XZKeychainItemAttributeValue *value in [self _XZKeychain_attributesIfLoaded].allValues) {
+    for (_XZKeychainAttributeValue *value in [self _XZKeychain_attributesIfLoaded].allValues) {
         if (value.originalValue != value.updatingValue) {
             isModified = YES;
             break;
@@ -347,21 +347,21 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     return isModified;
 }
 
+- (void)_XZKeychain_setValue:(id)aValue forAttributeKey:(NSString *)attributeKey {
+    NSMutableDictionary *attributes = [self _XZKeychain_attributesLazyLoad];
+    _XZKeychainAttributeValue *keychainValue = attributes[attributeKey];
+    if (keychainValue == nil) {
+        keychainValue = [[_XZKeychainAttributeValue alloc] init];
+        attributes[attributeKey] = keychainValue;
+    }
+    keychainValue.updatingValue = aValue;
+}
+
 - (void)setValue:(id)value forAttribute:(XZKeychainAttribute)attribute {
     if ([self valueForAttribute:attribute] != value) {
         NSString *aKey = NSStringFromKeychainAttribute(attribute);
         [self _XZKeychain_setValue:value forAttributeKey:aKey];
     }
-}
-
-- (void)_XZKeychain_setValue:(id)aValue forAttributeKey:(NSString *)attributeKey {
-    NSMutableDictionary *attributes = [self _XZKeychain_attributesLazyLoad];
-    _XZKeychainItemAttributeValue *keychainValue = attributes[attributeKey];
-    if (keychainValue == nil) {
-        keychainValue = [[_XZKeychainItemAttributeValue alloc] init];
-        attributes[attributeKey] = keychainValue;
-    }
-    keychainValue.updatingValue = aValue;
 }
 
 - (void)setObject:(id)anObject forAttribute:(XZKeychainAttribute)attribute {
@@ -389,8 +389,47 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     return [self valueForAttribute:attribute];
 }
 
+- (BOOL)search:(NSError *__autoreleasing  _Nullable *)error {
+    OSStatus statusCode             = errSecBadReq;                     // 状态码
+    // 创建查询条件
+    NSMutableDictionary *query = [[NSMutableDictionary alloc] init];
+    query[kXZKeychainTypeKey]       = NSStringFromKeychainType(self.type);
+    query[(id)kSecMatchLimit]       = (id)kSecMatchLimitOne;    // 返回一个
+    query[(id)kSecReturnAttributes] = (id)kCFBooleanTrue;       // 返回“非加密属性”字典
+    [self._XZKeychain_attributesIfLoaded enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+        query[key] = obj.updatingValue;
+    }];
+    
+    // 执行搜索
+    CFDictionaryRef resultRef = NULL;
+    statusCode = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&resultRef);
+    if (statusCode == noErr) { // 无错误
+        if (resultRef != NULL) {
+            [(__bridge NSDictionary *)resultRef enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+                _XZKeychainAttributeValue *value = [self _XZKeychain_attributesLazyLoad][key];
+                if (value == nil) {
+                    value = [[_XZKeychainAttributeValue alloc] init];
+                    [self _XZKeychain_attributesLazyLoad][key] = value;
+                }
+                value.originalValue = obj; // 只改变了原始值。
+                if (value.updatingValue == nil) {
+                    value.updatingValue = obj;
+                }
+            }];
+            CFRelease(resultRef);
+        }
+        return YES;
+    }
+    if (error != NULL) {  // 有错误且参数 error 不为 NULL
+        NSString *localizedDescription = NSStringFromOSStaus(statusCode);
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: localizedDescription};
+        *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:noErr userInfo:userInfo];
+    }
+    return NO;
+}
+
 - (void)reset {
-    [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+    [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
         obj.updatingValue = obj.originalValue;
     }];
 }
@@ -400,12 +439,12 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
 - (BOOL)_XZKeychain_handleStatus:(OSStatus)statusCode operation:(BOOL)isDeleting error:(NSError *__autoreleasing  _Nullable *)error {
     if (statusCode == noErr) {
         if (isDeleting) {
-            [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+            [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
                 obj.originalValue = nil;
                 obj.updatingValue = nil;
             }];
         } else {
-            [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+            [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
                 obj.originalValue = obj.updatingValue;
             }];
         }
@@ -422,18 +461,14 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
 - (BOOL)insert:(NSError * _Nullable * _Nullable)error {
     OSStatus statusCode = errSecBadReq;
     if ([self isModified]) {
-        if (![self search:NULL]) {
-            NSInteger count = self._XZKeychain_attributesIfLoaded.count;
-            NSMutableDictionary *updatingAttributes = [NSMutableDictionary dictionaryWithCapacity:count];
-            [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
-                updatingAttributes[key] = obj.updatingValue;
-            }];
-            // 插入新钥匙串，要指定钥匙串类型
-            updatingAttributes[kXZKeychainTypeKey] = [self _XZKeychain_typeString];
-            statusCode = SecItemAdd((__bridge CFDictionaryRef)updatingAttributes, NULL);
-        } else {
-            statusCode = errSecDuplicateItem;
-        }
+        NSInteger count = self._XZKeychain_attributesIfLoaded.count;
+        NSMutableDictionary *updatingAttributes = [NSMutableDictionary dictionaryWithCapacity:count];
+        [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+            updatingAttributes[key] = obj.updatingValue;
+        }];
+        // 插入新钥匙串，要指定钥匙串类型
+        updatingAttributes[kXZKeychainTypeKey] = [self _XZKeychain_typeString];
+        statusCode = SecItemAdd((__bridge CFDictionaryRef)updatingAttributes, NULL);
     }
     return [self _XZKeychain_handleStatus:statusCode operation:NO error:error];
 }
@@ -444,7 +479,7 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     if (attributes != nil && attributes.count > 0) { // 当参数不为 0 的时候。
         if ([self search:NULL]) {
             NSMutableDictionary *query = [NSMutableDictionary dictionaryWithDictionary:attributes];
-            [attributes enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+            [attributes enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
                 query[key] = obj.originalValue;
             }];
             if (query.count > 0) {
@@ -465,7 +500,7 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
             NSInteger count = self._XZKeychain_attributesIfLoaded.count;
             NSMutableDictionary *originalAttributes = [NSMutableDictionary dictionaryWithCapacity:count];
             NSMutableDictionary *updatingAttributes = [NSMutableDictionary dictionaryWithCapacity:count];
-            [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+            [[self _XZKeychain_attributesIfLoaded] enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
                 originalAttributes[key] = obj.originalValue;
                 updatingAttributes[key] = obj.updatingValue;
             }];
@@ -478,49 +513,10 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     return [self _XZKeychain_handleStatus:statusCode operation:NO error:error];
 }
 
-- (BOOL)search:(NSError *__autoreleasing  _Nullable *)error {
-    OSStatus statusCode             = errSecBadReq;                     // 状态码
-    // 创建查询条件
-    NSMutableDictionary *query = [[NSMutableDictionary alloc] init];
-    query[kXZKeychainTypeKey]       = NSStringFromKeychainItemType(self.type);
-    query[(id)kSecMatchLimit]       = (id)kSecMatchLimitOne;    // 返回一个
-    query[(id)kSecReturnAttributes] = (id)kCFBooleanTrue;       // 返回“非加密属性”字典
-    [self._XZKeychain_attributesIfLoaded enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
-        query[key] = obj.updatingValue;
-    }];
-    
-    // 执行搜索
-    CFDictionaryRef resultRef = NULL;
-    statusCode = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&resultRef);
-    if (statusCode == noErr) { // 无错误
-        if (resultRef != NULL) {
-            [(__bridge NSDictionary *)resultRef enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-                _XZKeychainItemAttributeValue *value = [self _XZKeychain_attributesLazyLoad][key];
-                if (value == nil) {
-                    value = [[_XZKeychainItemAttributeValue alloc] init];
-                    [self _XZKeychain_attributesLazyLoad][key] = value;
-                }
-                value.originalValue = obj; // 只改变了原始值。
-                if (value.updatingValue == nil) {
-                    value.updatingValue = obj;
-                }
-            }];
-            CFRelease(resultRef);
-        }
-        return YES;
-    }
-    if (error != NULL) {  // 有错误且参数 error 不为 NULL
-        NSString *localizedDescription = NSStringFromOSStaus(statusCode);
-        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: localizedDescription};
-        *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:noErr userInfo:userInfo];
-    }
-    return NO;
-}
-
 - (NSMutableDictionary *)_XZKeychain_attributeValuedDictionaryFromDictionary:(NSDictionary *)fromDictionary {
     NSMutableDictionary *resultDictionary = [[NSMutableDictionary alloc] initWithCapacity:fromDictionary.count];
     [fromDictionary enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-        _XZKeychainItemAttributeValue *value = [[_XZKeychainItemAttributeValue alloc] init];
+        _XZKeychainAttributeValue *value = [[_XZKeychainAttributeValue alloc] init];
         value.originalValue = obj;
         value.updatingValue = obj;
         resultDictionary[key] = value;
@@ -533,10 +529,10 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     NSMutableArray *keychainItems   = nil;                              // 返回值
     
     NSMutableDictionary *query = [[NSMutableDictionary alloc] init];
-    query[kXZKeychainTypeKey]       = NSStringFromKeychainItemType(self.type);
+    query[kXZKeychainTypeKey]       = NSStringFromKeychainType(self.type);
     query[(id)kSecMatchLimit]       = (id)kSecMatchLimitAll;// 返回所有
     query[(id)kSecReturnAttributes] = (id)kCFBooleanTrue;// 返回“非加密属性”字典
-    [self._XZKeychain_attributesIfLoaded enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+    [self._XZKeychain_attributesIfLoaded enumerateKeysAndObjectsUsingBlock:^(NSString * _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
         query[key] = obj.updatingValue;
     }];
     
@@ -550,7 +546,7 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
                 [(__bridge NSArray *)resultRef enumerateObjectsUsingBlock:^(NSDictionary * _Nonnull itemDict, NSUInteger idx, BOOL * _Nonnull stop) {
                     XZKeychain *item = [[XZKeychain alloc] initWithType:self.type];
                     [itemDict enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-                        _XZKeychainItemAttributeValue *value = [[_XZKeychainItemAttributeValue alloc] init];
+                        _XZKeychainAttributeValue *value = [[_XZKeychainAttributeValue alloc] init];
                         value.originalValue = obj;
                         value.updatingValue = obj;
                         [item _XZKeychain_attributesLazyLoad][key] = value;
@@ -580,7 +576,7 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
             [keychainItems addObjectsFromArray:tmpArray];
         }
         if (error != NULL && tmpError != nil) {
-            NSString *aKey = NSStringFromKeychainItemType(item.type) ?: @"Not A Keychain";
+            NSString *aKey = NSStringFromKeychainType(item.type);
             if (errors == nil) {
                 errors = [NSMutableDictionary dictionary];
             }
@@ -651,10 +647,10 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     if (attributes != NULL && attributes.count > 0) {
         // 查询密码：密码并不是随属性一起返回的，需要重新在钥匙串中查询。
         NSMutableDictionary *passwordQuery = [NSMutableDictionary dictionary];
-        [attributes enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainItemAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
+        [attributes enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, _XZKeychainAttributeValue * _Nonnull obj, BOOL * _Nonnull stop) {
             passwordQuery[key] = obj.originalValue;
         }];
-        _XZKeychainItemAttributeValue *passwordValue = [[_XZKeychainItemAttributeValue alloc] init];
+        _XZKeychainAttributeValue *passwordValue = [[_XZKeychainAttributeValue alloc] init];
         if (passwordQuery.count > 0) {
             // 设置返回值为 CFDataRef
             passwordQuery[(id)kSecReturnData] = (id)kCFBooleanTrue;
