@@ -28,16 +28,16 @@
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
     
-    XZKeychainManager *manager = [[XZKeychainManager alloc] init];
-    //[manager addQueryObject:self.identifierLabel.text forAttribute:(XZKeychainAttributeGeneric)];
+    XZKeychain *keychain = [[XZKeychain alloc] initWithType:(XZKeychainTypeGenericPassword)];
+    
     NSError *error = nil;
-    NSArray *array = [manager search:&error];
+    NSArray *array = [keychain match:&error];
     if (error == nil) {
-        for (XZKeychain *keychain in array) {
-            NSLog(@"%@", [keychain valueForAttribute:(XZKeychainAttributeCreationDate)]);
+        for (XZKeychain *item in array) {
+            NSLog(@"%@, %@, %@, %@", item.account, item.password, item.identifier, [item valueForAttribute:(XZKeychainAttributeCreationDate)]);
         }
     } else {
-        NSLog(@"%@", error.localizedDescription);
+        NSLog(@"%ld, %@", error.code, error.localizedDescription);
     }
     
 }
@@ -49,47 +49,46 @@
 
 
 - (IBAction)read:(id)sender {
-    XZKeychain *keychain = [[XZKeychain alloc] initWithIdentifier:self.identifierLabel.text];
-    NSString *account = keychain.account;
-    if (account.length == 0) {
-        self.messageLabel.text = @"没有找到";
-        self.accountTextField.text = nil;
-        self.passwordTextField.text = nil;
-    } else {
+    XZKeychain *keychain = [[XZKeychain alloc] initWithType:(XZKeychainTypeGenericPassword)];
+    keychain.identifier = self.identifierLabel.text;
+    NSError *error = nil;
+    if ([keychain search:&error]) {
         self.messageLabel.text = @"读取成功";
         NSString *password = keychain.password;
-        self.accountTextField.text = account;
+        self.accountTextField.text = keychain.account;
         self.passwordTextField.text = password;
+    } else {
+        self.messageLabel.text = error.localizedDescription;
+        self.accountTextField.text = nil;
+        self.passwordTextField.text = nil;
     }
 }
 
 - (IBAction)write:(id)sender {
-    XZKeychain *keychain = [[XZKeychain alloc] initWithIdentifier:self.identifierLabel.text];
     if (self.accountTextField.text.length == 0 || self.passwordTextField.text.length == 0) {
         self.messageLabel.text = @"帐号或密码为空";
         return;
     }
+    XZKeychain *keychain = [[XZKeychain alloc] initWithType:(XZKeychainTypeGenericPassword)];
+    keychain.identifier = self.identifierLabel.text;
     keychain.account = self.accountTextField.text;
     keychain.password = self.passwordTextField.text;
     NSError *error = nil;
-    if (![keychain writeToKeychainStore:&error]) {
-        self.messageLabel.text = error.localizedDescription;
-    } else {
+    if ([keychain insert:&error]) {
         self.messageLabel.text = @"写入成功";
+    } else {
+        self.messageLabel.text = error.localizedDescription;
     }
 }
 
 - (IBAction)remove:(id)sender {
-    XZKeychain *keychain = [[XZKeychain alloc] initWithIdentifier:self.identifierLabel.text];
+    XZKeychain *keychain = [[XZKeychain alloc] initWithType:(XZKeychainTypeGenericPassword)];
+    keychain.identifier = self.identifierLabel.text;
     NSError *error = nil;
-    if (![keychain deleteFromKeychainStore:&error]) {
-        self.messageLabel.text = error.localizedDescription;
+    if ([keychain remove:&error]) {
+        self.messageLabel.text = @"删除成功";
     } else {
-        if (error != nil) {
-            self.messageLabel.text = error.localizedDescription;
-        } else {
-            self.messageLabel.text = @"删除成功";
-        }
+        self.messageLabel.text = error.localizedDescription;
     }
 }
 
