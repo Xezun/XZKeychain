@@ -14,7 +14,7 @@
 
 NSString *const kXZKeychainErrorDomain = @"com.mlibai.keychain";
 
-static NSString *NSStringFromKeychainType(XZKeychainType type) {
+static NSString * _Nonnull NSStringFromKeychainType(XZKeychainType type) {
     switch (type) {
         case XZKeychainTypeGenericPassword:
             return (NSString *)kSecClassGenericPassword;
@@ -32,13 +32,14 @@ static NSString *NSStringFromKeychainType(XZKeychainType type) {
             return (NSString *)kSecClassIdentity;
             break;
         case XZKeychainTypeNotSupported:
-            return @"NotSupportedKeychain";
+            
         default:
+            return @"XZKeychainTypeNotSupported";
             break;
     }
 }
 
-static NSString *NSStringFromKeychainAttribute(XZKeychainAttribute attribute) {
+static  NSString * _Nonnull NSStringFromKeychainAttribute(XZKeychainAttribute attribute) {
     switch (attribute) {
         case XZKeychainAttributeAccessible:
             return (id)kSecAttrAccessible;
@@ -205,7 +206,7 @@ static NSString *NSStringFromKeychainAttribute(XZKeychainAttribute attribute) {
     }
 }
 
-static NSString *NSStringFromOSStaus(OSStatus status) {
+static NSString * _Nonnull NSStringFromOSStaus(OSStatus status) {
     switch (status) {
         case errSecSuccess:
             return @"没有错误"; // No error
