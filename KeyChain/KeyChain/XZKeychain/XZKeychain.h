@@ -112,7 +112,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
     // 所以它同时具有 XZKeychainKey 和 XZKeychainCertificate 两种钥匙串的属性。
 };
 
-@interface XZKeychain : NSObject
+@interface XZKeychain : NSObject <NSCopying>
 
 /**
  *  标识钥匙串所属的类型。
@@ -208,7 +208,19 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
  */
 + (NSArray<XZKeychain *> * _Nullable)allKeychains; // 所有钥匙串
 + (NSArray<XZKeychain *> * _Nullable)allKeychainsWithType:(XZKeychainType)type;
-+ (NSArray<XZKeychain *> * _Nullable)match:(NSArray<XZKeychain *> * _Nullable)matches error:(NSError * _Nullable * _Nullable)error; // 返回与指定条件相匹配的钥匙串。
+
+/**
+ *  返回与指定条件相匹配的钥匙串。
+ *
+ *  @param matches 与数组中的 XZKeychain 对象相匹配的钥匙串。
+ *  @param errors  匹配过程中会发生多个错误，错误信息按照待匹配的对象为键值。
+ *
+ *  @return 所有匹配的钥匙串。
+ */
++ (NSArray<XZKeychain *> * _Nullable)match:(NSArray<XZKeychain *> * _Nullable)matches errors:(NSDictionary<XZKeychain *, NSError *> * _Nullable * _Nullable)errors;
+
+// 不可复制，返回对象自身。主要是为了用作字典键值而提供的。
+- (nonnull id)copyWithZone:(NSZone * _Nullable)zone;
 
 @end
 

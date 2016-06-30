@@ -382,8 +382,11 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     if (statusCode == noErr) {
         return YES;
     } else if (error != NULL) {
-        NSDictionary *userinfo = @{NSLocalizedDescriptionKey: NSStringFromOSStaus(statusCode)};
-        *error = [NSError errorWithDomain:kXZKeychainErrorDomain code:statusCode userInfo:userinfo];
+        NSDictionary *userinfo = nil;
+        if ([[[NSLocale preferredLanguages] firstObject] isEqualToString:@"zh-Hans"]) {
+            userinfo = @{NSLocalizedDescriptionKey: NSStringFromOSStaus(statusCode)};
+        }
+        *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:statusCode userInfo:userinfo];
     }
     return NO;
 }
@@ -623,9 +626,9 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
     return keychainItems;
 }
 
-+ (NSArray<XZKeychain *> *)match:(NSArray<XZKeychain *> *)matches error:(NSError *__autoreleasing  _Nullable *)error {
++ (NSArray<XZKeychain *> *)match:(NSArray<XZKeychain *> *)matches errors:(NSDictionary<XZKeychain *, NSError *> *__autoreleasing  _Nullable * _Nullable)errors {
     NSMutableArray *keychainItems   = nil;
-    NSMutableDictionary *errors = nil;
+    NSMutableDictionary *errorsDict = nil;
     for (XZKeychain *item in matches) {
         NSError *tmpError = nil;
         NSArray *tmpArray = [item match:&tmpError];
@@ -634,16 +637,15 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
         } else {
             [keychainItems addObjectsFromArray:tmpArray];
         }
-        if (error != NULL && tmpError != nil) {
-            NSString *aKey = NSStringFromKeychainType(item.type);
-            if (errors == nil) {
-                errors = [NSMutableDictionary dictionary];
+        if (errors != NULL && tmpError != nil) {
+            if (errorsDict == nil) {
+                errorsDict = [NSMutableDictionary dictionary];
             }
-            errors[aKey] = tmpError;
+            errorsDict[item] = tmpError;
         }
     }
     if (errors != nil) {  // errors 不等于 nil 时，error 一定不为 NULL。
-        *error = [NSError errorWithDomain:kXZKeychainErrorDomain code:-9999 userInfo:errors];
+        *errors = errorsDict;
     }
     return keychainItems;
 }
@@ -676,6 +678,12 @@ static NSString *NSStringFromOSStaus(OSStatus status) {
         [matches addObject:keychain];
     }
     return matches;
+}
+
+#pragma mark - <NSCopying>
+
+- (id)copyWithZone:(NSZone *)zone {
+    return self;
 }
 
 @end

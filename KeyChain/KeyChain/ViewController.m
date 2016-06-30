@@ -121,14 +121,16 @@
     
     {
         NSLog(@"\n\n获取匹配指定条件下所有钥匙串");
-        NSError *error = nil;
+        NSDictionary *errors = nil;
         NSArray<XZKeychain *> *matches = @[
                                            [XZKeychain keychainWithType:(XZKeychainTypeGenericPassword)],
                                            [XZKeychain keychainWithType:(XZKeychainTypeInternetPassword)],
                                            [XZKeychain keychainWithType:(XZKeychainTypeCertificate)]];
-        NSArray<XZKeychain *> *keychains = [XZKeychain match:matches error:&error];
-        if (error.code != XZKeychainErrorSuccess) {
-            NSLog(@"%@", error.userInfo);
+        NSArray<XZKeychain *> *keychains = [XZKeychain match:matches errors:&errors];
+        if (errors != nil) {
+            [errors enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, NSError * _Nonnull obj, BOOL * _Nonnull stop) {
+                NSLog(@"%@: %@", key, obj.localizedDescription);
+            }];
         } else {
             [keychains enumerateObjectsUsingBlock:^(XZKeychain * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
                 NSLog(@"%02lu, %lu, %@, %@, %@", idx, obj.type, obj, obj.identifier, [obj valueForAttribute:(XZKeychainAttributeLabel)]);
