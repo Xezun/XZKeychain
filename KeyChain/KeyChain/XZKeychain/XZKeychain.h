@@ -11,6 +11,10 @@
 
 FOUNDATION_EXTERN NSString * _Nonnull const kXZKeychainErrorDomain;
 
+enum {
+    XZKeychainErrorSuccess = 0
+};
+
 /**
  *  几种钥匙串类型
  */
@@ -42,7 +46,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
     XZKeychainAttributeIsNegative,
     XZKeychainAttributeAccount,  // 帐号
     XZKeychainAttributeService,
-    XZKeychainAttributeGeneric,  // 通用属性，标识钥匙串的
+    XZKeychainAttributeGeneric,  // 通用属性，可以用作钥匙串唯一标识。
     XZKeychainAttributeSynchronizable,
     
     /* 钥匙串 XZKeychainInternetPassword 支持的属性：
@@ -110,12 +114,26 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 
 @interface XZKeychain : NSObject
 
+/**
+ *  标识钥匙串所属的类型。
+ */
 @property (nonatomic, readonly) XZKeychainType type;
 
+/**
+ *  钥匙串所有属性的集合
+ */
 @property (nonatomic, copy, readonly) NSDictionary * _Nullable attributes;
 
-@property (nonatomic, readonly, getter=isModified) BOOL modified;
-
+/**
+ *  初始化创建一个 XZKeychain 对象：
+ *  新建的 XZKeychain 对象，没有与真正的钥匙串建立关联；
+ *  在设置了一系列指定的属性后（一般是具有唯一标识作用的属性或属性组），通过调用 -search: 方法获取所有属性，并建立关联；
+ *  否则，钥匙串的某些操作可能无法进行或者返回错误。
+ *
+ *  @param type 钥匙串的类型
+ *
+ *  @return XZKeychain 对象
+ */
 + (nullable instancetype)keychainWithType:(XZKeychainType)type;
 - (nullable instancetype)initWithType:(XZKeychainType)type NS_DESIGNATED_INITIALIZER;
 
@@ -136,6 +154,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 /**
  *  根据当前已设置的属性，匹配第一个符合条件的钥匙串，复制钥匙串属性值到当前对象默认属性中。
  *  不改变当前已设置的属性的值，但是如果当前的没有给属性设置值，则会填充值。
+ *  这个方法总是按照目前已设置的值查找匹配的钥匙串，所以当属性发生改变时，调用这个方法后可能会得到不同的钥匙串。
  *
  *  @param error 如果查询钥匙串发生错误，将通过此参数传回。
  *
@@ -149,7 +168,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (void)reset;
 
 /**
- *  根据当前已设置的属性，创建一个钥匙串。
+ *  根据当前已设置的属性，创建一个钥匙串。如果创建钥匙串成功，当前对象的属性会被设置为钥匙串真实的属性。钥匙串如果调用 -search: 方法成功，将返回错误。
  *
  *  @param error 如果发生错误，可用此参数输出。
  *
@@ -158,7 +177,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (BOOL)insert:(NSError * _Nullable * _Nullable)error;
 
 /**
- *  根据当前的属性，匹配删除第一个符合条件的钥匙串。
+ *  根据当前的属性，匹配删除第一个符合条件的钥匙串。如果钥匙串本身不存在，则也返回删除成功。
  *
  *  @param error 如果发生错误，可用此参数输出。
  *
@@ -167,7 +186,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (BOOL)remove:(NSError * _Nullable * _Nullable)error;
 
 /**
- *  根据当前的属性，匹配更新第一个符合条件的钥匙串。
+ *  本方法调用前，必须调用了 -search: 方法，否则无法更新。
  *
  *  @param error 如果发生错误，可用此参数输出。
  *
@@ -184,7 +203,11 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
  */
 - (NSArray<XZKeychain *> * _Nullable)match:(NSError * _Nullable * _Nullable)error; //
 
+/**
+ *  通过搜索方式获取钥匙串。它都是类方法，或到的钥匙串都是已经关联好的。
+ */
 + (NSArray<XZKeychain *> * _Nullable)allKeychains; // 所有钥匙串
++ (NSArray<XZKeychain *> * _Nullable)allKeychainsWithType:(XZKeychainType)type;
 + (NSArray<XZKeychain *> * _Nullable)match:(NSArray<XZKeychain *> * _Nullable)matches error:(NSError * _Nullable * _Nullable)error; // 返回与指定条件相匹配的钥匙串。
 
 @end
@@ -205,11 +228,31 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
  *     └────────────────────────────────────────────────────────────────────────────────────┘
  *  2, 在 Target -> Capabilities -> Keychain Sharing 中设置。
  */
-@interface XZKeychain (XZGenericPasswordKeychainItem)
+@interface XZKeychain (XZGenericPasswordKeychain)
 
+/**
+ *  建议用 XZKeychainAttributeGeneric 属性作为 XZGenericPasswordKeychain 的唯一标识。
+ */
 @property (nonatomic, strong) NSString * _Nullable identifier;  // XZKeychainAttributeGeneric
+
+/**
+ *  返回的是 XZKeychainAttributeAccount 属性的值。
+ */
 @property (nonatomic, strong) NSString * _Nullable account;     // XZKeychainAttributeAccount
+
+/**
+ *  密码并非钥匙串的属性，在第一次调用该方法时，从钥匙串中获取。
+ */
 @property (nonatomic, strong) NSString * _Nullable password;
+
+/**
+ *  构造一个 XZGenericPasswordKeychain 并自动尝试关联。
+ *
+ *  @param identifier XZKeychainAttributeGeneric 属性被用作唯一标识符。
+ *
+ *  @return XZKeychain 对象，type = XZKeychainTypeGenericPassword。
+ */
++ (nullable instancetype)keychainWithIdentifier:(NSString * _Nullable)identifier;
 
 @end
 
