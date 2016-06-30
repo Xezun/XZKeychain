@@ -3,7 +3,7 @@
 //  Keychain
 //
 //  Created by iMac on 16/6/24.
-//  Copyright © 2016年 人民网. All rights reserved.
+//  Copyright © 2016年 mlibai. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -12,7 +12,7 @@
 FOUNDATION_EXTERN NSString * _Nonnull const kXZKeychainErrorDomain;
 
 enum {
-    XZKeychainErrorSuccess = 0
+    XZKeychainErrorSuccess = noErr
 };
 
 /**
