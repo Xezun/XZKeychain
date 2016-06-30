@@ -27,19 +27,6 @@
 
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    
-    XZKeychain *keychain = [[XZKeychain alloc] initWithType:(XZKeychainTypeGenericPassword)];
-    
-    NSError *error = nil;
-    NSArray *array = [keychain match:&error];
-    if (error == nil) {
-        for (XZKeychain *item in array) {
-            NSLog(@"%@, %@, %@, %@", item.account, item.password, item.identifier, [item valueForAttribute:(XZKeychainAttributeCreationDate)]);
-        }
-    } else {
-        NSLog(@"%ld, %@", error.code, error.localizedDescription);
-    }
-    
 }
 
 - (void)didReceiveMemoryWarning {

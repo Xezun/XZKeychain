@@ -119,7 +119,13 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 + (nullable instancetype)keychainWithType:(XZKeychainType)type;
 - (nullable instancetype)initWithType:(XZKeychainType)type NS_DESIGNATED_INITIALIZER;
 
-// 获取与设置“钥匙串”属性的方法
+/**
+ *  获取和设置“钥匙串”属性的方法。
+ *
+ *  setter: [keychain setValue:@"anAccount" forAttribute:XZKeychainAttributeAccount]; keychain[XZKeychainAttributeAccount] = @"anAccount";
+ *  getter: [keychain valueForAttribute:XZKeychainAttributeAccount]; keychain[XZKeychainAttributeAccount];
+ *
+ */
 - (void)setValue:(nullable id)value forAttribute:(XZKeychainAttribute)attribute;
 - (void)setObject:(nullable id)anObject forAttribute:(XZKeychainAttribute)attribute;
 - (nullable id)valueForAttribute:(XZKeychainAttribute)attribute;
@@ -127,17 +133,56 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (void)setObject:(nullable id)obj atIndexedSubscript:(XZKeychainAttribute)attribute;
 - (nullable id)objectAtIndexedSubscript:(XZKeychainAttribute)attribute;
 
-// 放弃所有已设置的属性，恢复到默认值或nil。
+/**
+ *  根据当前已设置的属性，匹配第一个符合条件的钥匙串，复制钥匙串属性值到当前对象默认属性中。
+ *  不改变当前已设置的属性的值，但是如果当前的没有给属性设置值，则会填充值。
+ *
+ *  @param error 如果查询钥匙串发生错误，将通过此参数传回。
+ *
+ *  @return YES 表示匹配到钥匙串，NO 表示没有匹配到钥匙串。
+ */
+- (BOOL)search:(NSError * _Nullable * _Nullable)error;
+
+/**
+ *  放弃所有已设置的属性，恢复到默认值或nil。
+ */
 - (void)reset;
 
-// 增删改
-- (BOOL)insert:(NSError * _Nullable * _Nullable)error; // 根据当前的属性，创建一个钥匙串。
-- (BOOL)remove:(NSError * _Nullable * _Nullable)error; // 根据当前的属性，匹配删除第一个符合条件的钥匙串。
-- (BOOL)update:(NSError * _Nullable * _Nullable)error; // 根据当前的属性，匹配更新第一个符合条件的钥匙串。
-- (BOOL)search:(NSError * _Nullable * _Nullable)error; // 根据当前的属性，匹配第一个符合条件的钥匙串，不改变当前已设置的属性的值，但是如果当前的没有给属性设置值，则会填充值。
+/**
+ *  根据当前已设置的属性，创建一个钥匙串。
+ *
+ *  @param error 如果发生错误，可用此参数输出。
+ *
+ *  @return YES 表示成功创建；NO 创建失败。
+ */
+- (BOOL)insert:(NSError * _Nullable * _Nullable)error;
 
+/**
+ *  根据当前的属性，匹配删除第一个符合条件的钥匙串。
+ *
+ *  @param error 如果发生错误，可用此参数输出。
+ *
+ *  @return YES 删除成功；NO 删除失败。
+ */
+- (BOOL)remove:(NSError * _Nullable * _Nullable)error;
 
-- (NSArray<XZKeychain *> * _Nullable)match:(NSError * _Nullable * _Nullable)error; // 根据当前的属性，匹配返回所有符合条件的钥匙串。
+/**
+ *  根据当前的属性，匹配更新第一个符合条件的钥匙串。
+ *
+ *  @param error 如果发生错误，可用此参数输出。
+ *
+ *  @return YES 更新成功；NO 更新失败。
+ */
+- (BOOL)update:(NSError * _Nullable * _Nullable)error; //
+
+/**
+ *  根据当前的属性，匹配返回所有符合条件的钥匙串。
+ *
+ *  @param error 如果发生错误，可用此参数输出。
+ *
+ *  @return 包含所有匹配结果的集合。
+ */
+- (NSArray<XZKeychain *> * _Nullable)match:(NSError * _Nullable * _Nullable)error; //
 
 + (NSArray<XZKeychain *> * _Nullable)allKeychains; // 所有钥匙串
 + (NSArray<XZKeychain *> * _Nullable)match:(NSArray<XZKeychain *> * _Nullable)matches error:(NSError * _Nullable * _Nullable)error; // 返回与指定条件相匹配的钥匙串。
