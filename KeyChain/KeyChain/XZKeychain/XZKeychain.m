@@ -693,13 +693,19 @@ static NSString * _Nonnull NSStringFromOSStaus(OSStatus status) {
  *  从钥匙串中获取密码的键名
  */
 #define kXZGenericPasswordKeychainPasswordKey (id)kSecValueData
+NSString * const _Nonnull kXZGenericPasswordKeychainDeviceIdentifier = @"com.mlibai.keychain.device_identifier";
 
 @implementation XZKeychain (XZGenericPasswordKeychain)
 
 + (instancetype)keychainWithIdentifier:(NSString *)identifier {
+    return [self keychainWithAccessGroup:nil identifier:identifier];
+}
+
++ (instancetype)keychainWithAccessGroup:(NSString *)accessGroup identifier:(NSString *)identifier {
     XZKeychain *keychain = [[XZKeychain alloc] initWithType:(XZKeychainTypeGenericPassword)];
     keychain.identifier = identifier;
-    [keychain search:NULL];
+    keychain.accessGroup = accessGroup;
+    // [keychain search:NULL];
     return keychain;
 }
 
@@ -741,6 +747,14 @@ static NSString * _Nonnull NSStringFromOSStaus(OSStatus status) {
     }
 }
 
+- (NSString *)accessGroup {
+    return [self valueForAttribute:(XZKeychainAttributeAccessGroup)];
+}
+
+- (void)setAccessGroup:(NSString *)accessGroup {
+    [self setValue:accessGroup forAttribute:(XZKeychainAttributeAccessGroup)];
+}
+
 - (_XZKeychainAttributeValue *)_XZGenericPasswordKeychainLoadPasswordAttributeValue:(NSError **)error {
     NSMutableDictionary *attributes = [self _XZKeychainAttributesLazyLoad];
     _XZKeychainAttributeValue *passwordValue = attributes[kXZGenericPasswordKeychainPasswordKey];
@@ -773,7 +787,27 @@ static NSString * _Nonnull NSStringFromOSStaus(OSStatus status) {
     return passwordValue;
 }
 
++ (NSString *)deviceIdentifier {
+    return [self deviceIdentifierForAccessGroup:nil];
+}
+
++ (NSString *)deviceIdentifierForAccessGroup:(NSString *)accessGroup {
+    NSString *deviceIdentifier = nil;
+    XZKeychain *keychain = [XZKeychain keychainWithAccessGroup:accessGroup identifier:kXZGenericPasswordKeychainDeviceIdentifier];
+    if ([keychain search:NULL]) {
+        deviceIdentifier = [keychain valueForAttribute:(XZKeychainAttributeDescription)];
+    } else {
+        NSString *identifier = [[NSUUID UUID] UUIDString];
+        [keychain setValue:identifier forAttribute:(XZKeychainAttributeDescription)];
+        if ([keychain insert:NULL]) {
+            deviceIdentifier = identifier;
+        }
+    }
+    return deviceIdentifier;
+}
+
 @end
+
 
 
 

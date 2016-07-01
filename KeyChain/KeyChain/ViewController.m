@@ -24,6 +24,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
+    NSLog(@"设备唯一标识符：%@", [XZKeychain deviceIdentifier]);
+    
     {
         NSLog(@"\n\n获取所有钥匙串");
         NSArray<XZKeychain *> *keychains = [XZKeychain allKeychains];
@@ -196,13 +198,17 @@
 
 - (IBAction)update:(UIButton *)sender {
     XZKeychain *keychain = [XZKeychain keychainWithIdentifier:self.identifierLabel.text];
-    keychain.account = self.accountTextField.text;
-    keychain.password = self.passwordTextField.text;
-    NSError *error = nil;
-    if ([keychain update:&error]) {
-        self.messageLabel.text = @"修改成功";
+    if ([keychain search:NULL]) {
+        keychain.account = self.accountTextField.text;
+        keychain.password = self.passwordTextField.text;
+        NSError *error = nil;
+        if ([keychain update:&error]) {
+            self.messageLabel.text = @"修改成功";
+        } else {
+            self.messageLabel.text = error.localizedDescription;
+        }
     } else {
-        self.messageLabel.text = error.localizedDescription;
+        NSLog(@"没有找到钥匙串");
     }
 }
 

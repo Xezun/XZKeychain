@@ -239,6 +239,9 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 
 @end
 
+
+FOUNDATION_EXTERN NSString * const _Nonnull kXZGenericPasswordKeychainDeviceIdentifier;
+
 /**
  *  通用密码钥匙串：XZKeychain.type = XZKeychainGenericPassword。
  *  关于 AccessGroup 钥匙串共享的两种设置方法：
@@ -272,14 +275,24 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
  */
 @property (nonatomic, strong) NSString * _Nullable password;
 
+@property (nonatomic, strong) NSString * _Nullable accessGroup;
+
 /**
- *  构造一个 XZGenericPasswordKeychain 并自动尝试关联。
+ *  构造一个 XZGenericPasswordKeychain。
  *
  *  @param identifier XZKeychainAttributeGeneric 属性被用作唯一标识符。
  *
  *  @return XZKeychain 对象，type = XZKeychainTypeGenericPassword。
  */
 + (nullable instancetype)keychainWithIdentifier:(NSString * _Nullable)identifier;
++ (nullable instancetype)keychainWithAccessGroup:(NSString * _Nullable)accessGroup identifier:(NSString * _Nullable)identifier;
+
+/**
+ *  以 kXZGenericPasswordKeychainDeviceIdentifier 作为唯一标识符，以 UUID 作为设备 ID 的钥匙串。
+ *  因为存储在钥匙串里的内容，不会因为删除 App 而清空，故可以用已储存的 UUID 作设备的唯一标识。
+ */
++ (NSString * _Nullable)deviceIdentifier;
++ (NSString * _Nullable)deviceIdentifierForAccessGroup:(NSString * _Nullable)accessGroup;
 
 @end
 
