@@ -8,6 +8,29 @@
 ##### 通用钥匙串的使用示例代码：
 
 ```objective-c
+    // 获取设备唯一标识符
+    NSLog(@"设备唯一标识符：%@", [XZKeychain deviceIdentifier]);
+    
+    // 存取密码的简单方法：
+
+    // 保存密码
+    if ([XZKeychain setPassword:@"aPassword" forAccount:@"anAccount" identifier:@"anIdentifier"]) {
+        NSLog(@"密码保存成功");
+    }
+    
+    // 读取密码
+    NSString *password = [XZKeychain passwordForAccount:@"anAccount" identifier:@"anIdentifier"];
+    if (password != nil) {
+        NSLog(@"获取成功，密码为：%@", password);
+    }
+    
+    // 删除密码
+    if ([XZKeychain setPassword:nil forAccount:@"anAccount" identifier:@"anIdentifier"]) {
+        NSLog(@"删除成功");
+    }
+
+    // XZKeychain 完整的使用方法：
+
     {
         NSLog(@"\n\n获取所有钥匙串");
         NSArray<XZKeychain *> *keychains = [XZKeychain allKeychains];
