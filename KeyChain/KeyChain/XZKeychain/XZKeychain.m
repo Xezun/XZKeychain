@@ -12,8 +12,6 @@
 // 设置钥匙串类型的键名
 #define kXZKeychainTypeKey  (NSString *)kSecClass
 
-NSString *const kXZKeychainErrorDomain = @"com.mlibai.keychain";
-
 static NSString * _Nonnull NSStringFromKeychainType(XZKeychainType type) {
     switch (type) {
         case XZKeychainTypeGenericPassword:
@@ -384,7 +382,13 @@ static NSString * _Nonnull NSStringFromOSStaus(OSStatus status) {
         return YES;
     } else if (error != NULL) {
         NSDictionary *userinfo = nil;
-        if ([[[NSLocale preferredLanguages] firstObject] isEqualToString:@"zh-Hans"]) {
+        NSString *languageString = [[NSLocale preferredLanguages] firstObject];
+        /**
+         *  zh-Hans（简体）、zh-Hant（繁体）: < iOS 9.0
+         *  zh-HK（香港繁体）：>= iOS 7.0
+         *  zh-Hans-CN（简体）、zh-Hant-CN（繁体）、zh-TW（台湾繁体）：>= iOS 9.0
+         */
+        if ([languageString hasPrefix:@"zh-"]) {
             userinfo = @{NSLocalizedDescriptionKey: NSStringFromOSStaus(statusCode)};
         }
         *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:statusCode userInfo:userinfo];

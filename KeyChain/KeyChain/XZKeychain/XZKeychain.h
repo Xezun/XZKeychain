@@ -9,8 +9,6 @@
 #import <Foundation/Foundation.h>
 @import Security;
 
-FOUNDATION_EXTERN NSString * _Nonnull const kXZKeychainErrorDomain;
-
 enum {
     XZKeychainErrorSuccess = noErr
 };

@@ -48,8 +48,8 @@
         NSLog(@"\n\n创建钥匙串: kIdentifierForKeychain");
         XZKeychain *keychain = [XZKeychain keychainWithType:(XZKeychainTypeGenericPassword)];
         keychain.identifier = @"kIdentifierForKeychain";
-        keychain.account = @"newKeychain";
-        keychain.password = @"newPassword";
+        keychain.account = @"account";
+        keychain.password = @"password";
         NSError *error = nil;
         if ([keychain insert:&error]) {
             NSLog(@"%lu, %@, %@, %@", keychain.type, keychain, keychain.account, keychain.password);
@@ -61,7 +61,7 @@
     }
     
     {
-        NSLog(@"\n\n获取钥匙串: kIdentifierForKeychain");
+        NSLog(@"\n\n查询钥匙串: kIdentifierForKeychain");
         XZKeychain *keychain = [XZKeychain keychainWithType:(XZKeychainTypeGenericPassword)];
         keychain.identifier = @"kIdentifierForKeychain";
         NSError *error = nil;
