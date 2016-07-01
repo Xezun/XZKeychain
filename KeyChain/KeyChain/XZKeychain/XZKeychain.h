@@ -16,10 +16,10 @@ enum {
 };
 
 /**
- *  几种钥匙串类型
+ *  XZKeychain 的类型，以下类型与实际包含的类型是相对应的。
  */
 typedef NS_ENUM(NSUInteger, XZKeychainType) {
-    XZKeychainTypeGenericPassword = 0,  // 通用钥匙串
+    XZKeychainTypeGenericPassword = 0,  // 通用密码
     XZKeychainTypeInternetPassword,     // 网络密码
     XZKeychainTypeCertificate,          // 证书
     XZKeychainTypeKey,                  // 密钥
@@ -46,7 +46,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
     XZKeychainAttributeIsNegative,
     XZKeychainAttributeAccount,  // 帐号
     XZKeychainAttributeService,
-    XZKeychainAttributeGeneric,  // 通用属性，可以用作钥匙串唯一标识。
+    XZKeychainAttributeGeneric,  // 通用属性，XZKeychain 建议把它作为管理 XZKeychainTypeGenericPassword 类型钥匙串的唯一标识符。
     XZKeychainAttributeSynchronizable,
     
     /* 钥匙串 XZKeychainInternetPassword 支持的属性：
@@ -112,36 +112,41 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
     // 所以它同时具有 XZKeychainKey 和 XZKeychainCertificate 两种钥匙串的属性。
 };
 
+
+/**
+ *  XZKeychain 类封装了系统“钥匙串”API的“增删改查”的操作，XZKeychain 所保存的信息只是钥匙串属性信息的一个拷贝，对钥匙串的属性的操作，在调用相应的方法前，并不影响“钥匙串”实际的信息。
+ */
 @interface XZKeychain : NSObject <NSCopying>
 
 /**
- *  标识钥匙串所属的类型。
+ *  标识钥匙串的类型。
  */
 @property (nonatomic, readonly) XZKeychainType type;
 
 /**
- *  钥匙串所有属性的集合
+ *  钥匙串所有属性的集合。
  */
 @property (nonatomic, copy, readonly) NSDictionary * _Nullable attributes;
 
 /**
  *  初始化创建一个 XZKeychain 对象：
- *  新建的 XZKeychain 对象，没有与真正的钥匙串建立关联；
- *  在设置了一系列指定的属性后（一般是具有唯一标识作用的属性或属性组），通过调用 -search: 方法获取所有属性，并建立关联；
- *  否则，钥匙串的某些操作可能无法进行或者返回错误。
+ *  因为 XZKeychain 只是钥匙串信息的一个拷贝，所以通过初始化方法创建的 XZKeychain 对象，并不具备操作某一具体的钥匙串的能力；
+ *  一般情况下，您需要设置它的属性（可以匹配到一个具体的钥匙串的一个或多个属性），然后调用 -search: 方法，对象就会匹配指定的钥匙串并建立关联。
  *
- *  @param type 钥匙串的类型
+ *  @param type 指定钥匙串的类型。
  *
- *  @return XZKeychain 对象
+ *  @return 指定类型的 XZKeychain 对象。
  */
 + (nullable instancetype)keychainWithType:(XZKeychainType)type;
 - (nullable instancetype)initWithType:(XZKeychainType)type NS_DESIGNATED_INITIALIZER;
 
 /**
- *  获取和设置“钥匙串”属性的方法。
+ *  获取和设置“钥匙串”属性的方法。属性大多是 NSData 或 NSString 类型。
  *
- *  setter: [keychain setValue:@"anAccount" forAttribute:XZKeychainAttributeAccount]; keychain[XZKeychainAttributeAccount] = @"anAccount";
- *  getter: [keychain valueForAttribute:XZKeychainAttributeAccount]; keychain[XZKeychainAttributeAccount];
+ *  setter1: [keychain setValue:@"anAccount" forAttribute:XZKeychainAttributeAccount]; 
+ *  setter2: keychain[XZKeychainAttributeAccount] = @"anAccount";
+ *  getter1: id aValue = [keychain valueForAttribute:XZKeychainAttributeAccount];
+ *  getter2: id aValue = keychain[XZKeychainAttributeAccount];
  *
  */
 - (void)setValue:(nullable id)value forAttribute:(XZKeychainAttribute)attribute;
@@ -152,9 +157,9 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (nullable id)objectAtIndexedSubscript:(XZKeychainAttribute)attribute;
 
 /**
- *  根据当前已设置的属性，匹配第一个符合条件的钥匙串，复制钥匙串属性值到当前对象默认属性中。
- *  不改变当前已设置的属性的值，但是如果当前的没有给属性设置值，则会填充值。
- *  这个方法总是按照目前已设置的值查找匹配的钥匙串，所以当属性发生改变时，调用这个方法后可能会得到不同的钥匙串。
+ *  XZKeychain 对象根据它当前已设置的属性，匹配并复制第一个符合条件的钥匙串的信息；
+ *  XZKeychain 将查询到的信息全部拷贝下来，通过存取方法可以获取这些值的信息；
+ *  这个方法可以调用多次，每次都是根据当前设置的属性信息匹配并查找（第一条），所以当属性发生改变时，调用这个方法后可能获取到的信息并不完全一样。
  *
  *  @param error 如果查询钥匙串发生错误，将通过此参数传回。
  *
@@ -168,7 +173,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (void)reset;
 
 /**
- *  根据当前已设置的属性，创建一个钥匙串。如果创建钥匙串成功，当前对象的属性会被设置为钥匙串真实的属性。钥匙串如果调用 -search: 方法成功，将返回错误。
+ *  根据当前已设置的属性，创建一个钥匙串。如果创建钥匙串成功，对象会与该钥匙串创建关联。如果是一个已经调用 -search: 方法并返回成功的对象，调用本方法将会返回错误。
  *
  *  @param error 如果发生错误，可用此参数输出。
  *
@@ -186,7 +191,7 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (BOOL)remove:(NSError * _Nullable * _Nullable)error;
 
 /**
- *  本方法调用前，必须调用了 -search: 方法，否则无法更新。
+ *  更新钥匙串信息，在更新前，对象必须已经关联了具体的钥匙，否则更新操作将不会执行（返回NO）。
  *
  *  @param error 如果发生错误，可用此参数输出。
  *
@@ -204,18 +209,28 @@ typedef NS_ENUM(NSUInteger, XZKeychainAttribute) {
 - (NSArray<XZKeychain *> * _Nullable)match:(NSError * _Nullable * _Nullable)error; //
 
 /**
- *  通过搜索方式获取钥匙串。它都是类方法，或到的钥匙串都是已经关联好的。
+ *  获取所有钥匙串。
+ *
+ *  @return 包含所有有钥匙串信息的 XZKeychain 对象集合。
  */
 + (NSArray<XZKeychain *> * _Nullable)allKeychains; // 所有钥匙串
+
+/**
+ *  获取某一类型下的所有钥匙串。
+ *
+ *  @param type 钥匙串的类型，枚举值。
+ *
+ *  @return 包含指定类型钥匙串信息的 XZKeychain 对象集合。
+ */
 + (NSArray<XZKeychain *> * _Nullable)allKeychainsWithType:(XZKeychainType)type;
 
 /**
- *  返回与指定条件相匹配的钥匙串。
+ *  通过 XZKeychain 对象，指定钥匙串的基本信息，调用此方法获取信息相匹配的钥匙串。
  *
- *  @param matches 与数组中的 XZKeychain 对象相匹配的钥匙串。
- *  @param errors  匹配过程中会发生多个错误，错误信息按照待匹配的对象为键值。
+ *  @param matches 包含指定匹配信息的 XZKeychain 对象。
+ *  @param errors  对于每一个待匹配的 XZKeychain 对象，获取匹配的钥匙串时，都可能发生错误，该字典以待匹配 XZKeychain 对象为键，返回匹配过程中包含的错误信息。
  *
- *  @return 所有匹配的钥匙串。
+ *  @return 所有符合匹配条件的包含钥匙串信息的 XZKeychain 对象集合。该返回结果只包含匹配没有发生错误的筛选条件。
  */
 + (NSArray<XZKeychain *> * _Nullable)match:(NSArray<XZKeychain *> * _Nullable)matches errors:(NSDictionary<XZKeychain *, NSError *> * _Nullable * _Nullable)errors;
 
