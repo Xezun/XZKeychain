@@ -713,6 +713,39 @@ NSString * const _Nonnull kXZGenericPasswordKeychainDeviceIdentifier = @"com.mli
     return keychain;
 }
 
++ (BOOL)setPassword:(NSString *)password forAccount:(NSString *)account accessGroup:(NSString *)accessGroup identifier:(NSString *)identifier {
+    XZKeychain *keychain = [XZKeychain keychainWithAccessGroup:accessGroup identifier:identifier];
+    keychain.account = account;
+    if (password == nil) { // 为 nil 删除钥匙串
+        return [keychain remove:NULL];
+    } else { // 不为 nil ，尝试更新或添加
+        if ([keychain search:NULL]) {
+            keychain.password = password;
+            return [keychain update:NULL];
+        } else {
+            keychain.password = password;
+            return [keychain insert:NULL];
+        }
+    }
+}
+
++ (BOOL)setPassword:(NSString *)password forAccount:(NSString *)account identifier:(NSString *)identifier {
+    return [self setPassword:password forAccount:account accessGroup:nil identifier:identifier];
+}
+
++ (NSString *)passwordForAccount:(NSString *)account accessGroup:(NSString *)accessGroup identifier:(NSString *)identifier {
+    NSString *password = nil;
+    XZKeychain *keychain = [XZKeychain keychainWithAccessGroup:accessGroup identifier:identifier];
+    if ([keychain search:NULL] && [keychain.account isEqualToString:account]) {
+        password = keychain.password;
+    }
+    return password;
+}
+
++ (NSString *)passwordForAccount:(NSString *)account identifier:(NSString *)identifier {
+    return [self passwordForAccount:account accessGroup:nil identifier:identifier];
+}
+
 - (NSString *)identifier {
     return [self valueForAttribute:(XZKeychainAttributeGeneric)];
 }

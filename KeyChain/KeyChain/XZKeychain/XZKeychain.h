@@ -286,6 +286,33 @@ FOUNDATION_EXTERN NSString * const _Nonnull kXZGenericPasswordKeychainDeviceIden
 + (nullable instancetype)keychainWithAccessGroup:(NSString * _Nullable)accessGroup identifier:(NSString * _Nullable)identifier;
 
 /**
+ *  保存密码的便利方法。
+ *
+ *  @param password    密码
+ *  @param account     帐号
+ *  @param accessGroup 分组
+ *  @param identifier  唯一标识
+ *
+ *  @return YES 保存成功，NO 保存失败
+ */
++ (BOOL)setPassword:(NSString * _Nullable)password forAccount:(NSString * _Nullable)account accessGroup:(NSString * _Nullable)accessGroup identifier:(NSString * _Nullable)identifier;
++ (BOOL)setPassword:(NSString * _Nullable)password forAccount:(NSString * _Nullable)account identifier:(NSString * _Nullable)identifier;
+
+/**
+ *  获取密码的便利方法。
+ *
+ *  @param account     帐号
+ *  @param accessGroup 分组
+ *  @param identifier  唯一标识
+ *
+ *  @return 已保存的密码。如果没有找到则返回 nil 。
+ */
++ (NSString * _Nullable)passwordForAccount:(NSString * _Nullable)account accessGroup:(NSString * _Nullable)accessGroup identifier:(NSString * _Nullable)identifier;
++ (NSString * _Nullable)passwordForAccount:(NSString * _Nullable)account identifier:(NSString * _Nullable)identifier;
+
+
+
+/**
  *  以 kXZGenericPasswordKeychainDeviceIdentifier 作为唯一标识符，以 UUID 作为设备 ID 的钥匙串。
  *  因为存储在钥匙串里的内容，不会因为删除 App 而清空，故可以用已储存的 UUID 作设备的唯一标识。
  */

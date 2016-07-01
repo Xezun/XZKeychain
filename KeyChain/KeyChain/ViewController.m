@@ -26,6 +26,22 @@
     
     NSLog(@"设备唯一标识符：%@", [XZKeychain deviceIdentifier]);
     
+    // 保存密码
+    if ([XZKeychain setPassword:@"aPassword" forAccount:@"anAccount" identifier:@"anIdentifier"]) {
+        NSLog(@"密码保存成功");
+    }
+    
+    // 读取密码
+    NSString *password = [XZKeychain passwordForAccount:@"anAccount" identifier:@"anIdentifier"];
+    if (password != nil) {
+        NSLog(@"获取成功，密码为：%@", password);
+    }
+    
+    // 删除密码
+    if ([XZKeychain setPassword:nil forAccount:@"anAccount" identifier:@"anIdentifier"]) {
+        NSLog(@"删除成功");
+    }
+    
     {
         NSLog(@"\n\n获取所有钥匙串");
         NSArray<XZKeychain *> *keychains = [XZKeychain allKeychains];
